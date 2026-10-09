@@ -171,4 +171,4 @@ rag-source-grounded-learning/
 ---
 
 ## License
-MIT License. Built by Mohamed Hasim.
+No project license has been selected.
