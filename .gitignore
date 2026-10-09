@@ -1,0 +1,27 @@
+# Environments
+.env
+.venv/
+venv/
+ENV/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+
+# Storage & Data
+data/
+*.db
+*.sqlite3
+uploads/
+
+# OS and Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

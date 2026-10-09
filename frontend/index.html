@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scholar Studio - RAG Quiz & Source-Grounded Learning</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="top-nav">
+    <div class="brand-section">
+      <div class="brand-logo">S</div>
+      <div class="brand-title">Scholar Studio</div>
+      <select id="workspaceSelect" class="workspace-selector" title="Select Workspace">
+        <!-- Workspaces injected dynamically -->
+      </select>
+      <button class="btn btn-secondary" id="btnNewWorkspace" style="padding: 4px 10px; font-size: 12px;">+ New Notebook</button>
+    </div>
+
+    <div class="top-actions">
+      <div class="model-badge">
+        <span class="model-dot"></span>
+        <span id="modelIndicator">OmniRoute / gemini-3.8-flash</span>
+      </div>
+      <button class="btn btn-secondary" id="btnExportNotes">Export Study Pack</button>
+    </div>
+  </header>
+
+  <!-- Mobile Panel Tabs (Visible on <= 960px) -->
+  <nav class="mobile-panel-nav" id="mobilePanelNav" aria-label="Mobile Navigation">
+    <button class="mobile-tab-btn" data-panel="sources">Sources</button>
+    <button class="mobile-tab-btn active" data-panel="studio">Studio</button>
+    <button class="mobile-tab-btn" data-panel="mastery">Mastery</button>
+  </nav>
+
+  <!-- 3-Column Cockpit Layout -->
+  <main class="cockpit-container">
+
+    <!-- Column 1: Sources & Index -->
+    <aside class="column-sources">
+      <div class="pane-header">
+        <div class="pane-title">
+          <span>Sources</span>
+          <span class="badge-count" id="sourcesCountBadge">0</span>
+        </div>
+        <div style="display: flex; gap: 4px;">
+          <button class="btn btn-secondary" id="btnUploadModal" style="padding: 4px 8px; font-size: 11px;">+ PDF</button>
+          <button class="btn btn-secondary" id="btnTextModal" style="padding: 4px 8px; font-size: 11px;">+ Note</button>
+        </div>
+      </div>
+      <div class="sources-content" id="sourcesList">
+        <!-- Injected dynamically -->
+        <div style="text-align: center; color: var(--ink-muted); padding: 40px 10px; font-size: 13px;">
+          No sources added yet.<br>Upload a PDF or paste text to begin.
+        </div>
+      </div>
+      <div style="padding: 10px 12px; border-top: 1px solid var(--border-subtle); font-size: 11.5px; color: var(--ink-muted); display: flex; justify-content: space-between;">
+        <span id="totalChunksBadge">0 chunks indexed</span>
+        <a href="javascript:void(0)" id="toggleSelectAllSources" style="color: var(--accent-indigo); text-decoration: none;">Select all</a>
+      </div>
+    </aside>
+
+    <!-- Column 2: Studio / Chat & Synthesis -->
+    <section class="column-studio mobile-active">
+      <div class="pane-header">
+        <div class="pane-title">
+          <span>Studio Inquiry</span>
+          <span class="badge-count" id="activeSourcesIndicator">0 sources active</span>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center"><select id="chatSessionSelect" aria-label="Saved conversations" style="max-width:150px"></select><button class="btn btn-secondary" id="btnRenameChat">Rename</button><button class="btn btn-secondary" id="btnDeleteChat">Delete</button><button class="btn btn-ghost" id="btnClearChat" style="font-size: 11px; padding: 4px 8px;">New chat</button></div>
+      </div>
+
+      <div class="studio-stream" id="chatStream">
+        <div class="message-card message-assistant" style="margin-top: 20px;">
+          <div class="assistant-body" style="font-family: var(--font-serif); font-size: 16px; color: var(--ink-secondary);">
+            Welcome to Scholar Studio. Upload your lecture slides, academic papers, or textbook chapters in the Sources panel on the left.
+            <br><br>
+            Every synthesized answer is <strong>strictly grounded</strong> with verifiable citation badges linking directly to page offsets and source chunks.
+          </div>
+        </div>
+      </div>
+
+      <!-- Studio Input Bar -->
+      <div class="studio-input-container">
+        <div class="studio-input-bar">
+          <textarea id="queryInput" class="studio-textarea" rows="1" placeholder="Ask anything about your uploaded sources... (Press Enter to send)"></textarea>
+          <button class="btn btn-primary" id="btnSendQuery" style="height: 34px; padding: 0 14px;">Inquire</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Column 3: Quiz & Active Mastery Working Surface -->
+    <aside class="column-mastery">
+      <div class="mastery-tabs">
+        <button class="mastery-tab-btn active" data-tab="quiz">Active Recall Quiz</button>
+        <button class="mastery-tab-btn" data-tab="guide">Study Guide</button>
+        <button class="mastery-tab-btn" data-tab="mastery">Concept Analytics</button>
+      </div>
+
+      <div class="mastery-body" id="masteryTabBody">
+        <!-- Quiz Tab Content (Default) -->
+        <div id="tabContentQuiz">
+          <div class="quiz-controls-card">
+            <div class="control-label">Diagnostic Difficulty</div>
+            <select id="quizDifficulty" class="control-select">
+              <option value="easy">Level 1: Foundational (Recall)</option>
+              <option value="medium" selected>Level 2: Intermediate (Understanding & Synthesis)</option>
+              <option value="hard">Level 3: Rigorous (Bloom Analyze/Evaluate)</option>
+            </select>
+
+            <div class="control-label">Question Volume</div>
+            <select id="quizCount" class="control-select">
+              <option value="3">3 Diagnostic Questions</option>
+              <option value="5" selected>5 Standard Questions</option>
+              <option value="10">10 Full Exam Simulation</option>
+            </select>
+
+            <button class="btn btn-primary" id="btnGenerateQuiz" style="width: 100%; justify-content: center; padding: 8px 0; margin-top: 4px;">
+              Generate Grounded Quiz
+            </button>
+          </div>
+
+          <div id="quizArenaContainer">
+            <div style="text-align: center; color: var(--ink-muted); padding: 40px 10px; font-size: 13px;">
+              No quiz loaded.<br>Click "Generate Grounded Quiz" above to create source-verified questions.
+            </div>
+          </div>
+        </div>
+
+        <!-- Study Guide Tab Content -->
+        <div id="tabContentGuide" style="display: none;">
+          <div style="margin-bottom: 12px; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" id="btnSynthesizeGuide" style="font-size: 12px;">Synthesize New Guide</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:10px"><select id="savedGuideSelect" aria-label="Saved study guides" style="flex:1"></select><button class="btn btn-secondary" id="btnDeleteGuide">Delete</button></div>
+          <div id="studyGuideContent" style="font-size: 13.5px; line-height: 1.6;">
+            <div style="text-align: center; color: var(--ink-muted); padding: 40px 10px;">
+              Click "Synthesize New Guide" to generate executive summaries, glossaries, and review prompts.
+            </div>
+          </div>
+        </div>
+
+        <!-- Concept Mastery Analytics Tab Content -->
+        <div id="tabContentMastery" style="display: none;">
+          <div id="masteryAnalyticsContainer">
+            <div style="text-align: center; color: var(--ink-muted); padding: 40px 10px;">
+              Take quizzes to populate your concept mastery radar.
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Modals -->
+
+  <!-- Modal: Upload PDF -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-card">
+      <h3 style="font-size: 16px; margin-bottom: 14px; color: var(--ink-primary);">Upload Document Source</h3>
+      <input type="file" id="fileUploadInput" accept=".pdf,.txt,.md" style="margin-bottom: 16px; width: 100%; font-size: 13px;">
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('uploadModal').classList.remove('active')">Cancel</button>
+        <button class="btn btn-primary" id="btnSubmitUpload">Ingest & Index</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New Text / Note -->
+  <div class="modal-overlay" id="textModal">
+    <div class="modal-card">
+      <h3 style="font-size: 16px; margin-bottom: 14px; color: var(--ink-primary);">Add Note / Lecture Text</h3>
+      <input type="text" id="noteTitleInput" placeholder="Note Title (e.g., Week 3 Lecture Notes)" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 12px; font-size: 13px;">
+      <textarea id="noteContentInput" rows="6" placeholder="Paste raw notes or textbook excerpt..." style="width: 100%; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 16px; font-size: 13px; font-family: var(--font-sans); resize: vertical;"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('textModal').classList.remove('active')">Cancel</button>
+        <button class="btn btn-primary" id="btnSubmitNote">Save & Chunk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: New Workspace -->
+  <div class="modal-overlay" id="workspaceModal">
+    <div class="modal-card">
+      <h3 style="font-size: 16px; margin-bottom: 14px; color: var(--ink-primary);">Create New Research Notebook</h3>
+      <input type="text" id="newWorkspaceTitle" placeholder="Notebook Title (e.g. Distributed Systems 101)" style="width: 100%; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 12px; font-size: 13px;">
+      <textarea id="newWorkspaceDesc" rows="3" placeholder="Description or course syllabus..." style="width: 100%; padding: 8px 10px; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 16px; font-size: 13px; font-family: var(--font-sans);"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('workspaceModal').classList.remove('active')">Cancel</button>
+        <button class="btn btn-primary" id="btnSubmitNewWorkspace">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Citation Detail Viewer -->
+  <div class="modal-overlay" id="citationModal">
+    <div class="modal-card" style="width: 540px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <span class="question-bloom" id="modalCitationPill">Citation [1]</span>
+        <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 14px;" onclick="document.getElementById('citationModal').classList.remove('active')">✕</button>
+      </div>
+      <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 4px;" id="modalCitationSource">Source Title</div>
+      <div style="font-size: 12px; color: var(--ink-muted); margin-bottom: 14px;" id="modalCitationPage">Page 1</div>
+      <div style="background: var(--canvas-bg); border-left: 3px solid var(--accent-indigo); padding: 12px 14px; border-radius: 6px; font-size: 13.5px; line-height: 1.6; color: var(--ink-primary); font-family: var(--font-serif);" id="modalCitationQuote">
+        "Verbatim quote excerpt will appear here."
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/persistence.js"></script>
+</body>
+</html>
